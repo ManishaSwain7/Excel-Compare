@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FileUploader from './components/FileUploader';
 import StatsDashboard from './components/StatsDashboard';
 import ComparisonResults from './components/ComparisonResults';
+import LoadingFallback from './components/LoadingFallback';
 import { excelComparison } from './services/api';
 import './App.css';
 
@@ -12,19 +13,54 @@ function App() {
   const [comparisonId, setComparisonId] = useState(null);
   const [error, setError] = useState(null);
   const [currentStep, setCurrentStep] = useState('upload'); // upload, results
+  const [isAppReady, setIsAppReady] = useState(false);
 
   const handleFilesSelected = async (fileA, fileB) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Additional validation before API call
+      if (!fileA || !fileB) {
+        throw new Error('Both files are required for comparison');
+      }
+
+      console.log('Starting file comparison...', { 
+        fileA: fileA.name, 
+        fileB: fileB.name 
+      });
+
       const response = await excelComparison.compareFiles(fileA, fileB);
+      
+      if (!response || !response.result) {
+        throw new Error('Invalid response from server');
+      }
+
       setComparisonResult(response.result);
       setComparisonId(response.comparisonId);
       setCurrentStep('results');
+      
+      console.log('File comparison completed successfully');
     } catch (error) {
       console.error('Error comparing files:', error);
-      setError(error.response?.data?.error || 'An error occurred while comparing files. Please try again.');
+      
+      let errorMessage = 'An error occurred while comparing files. Please try again.';
+      
+      if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+        errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+      } else if (error.response?.status === 413) {
+        errorMessage = 'Files are too large. Please try with smaller files.';
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.error || 'Invalid file format. Please upload valid Excel files (.xlsx or .xls).';
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Server error occurred. Please try again later.';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -37,6 +73,30 @@ function App() {
     setCurrentStep('upload');
   };
 
+  // Initialize app and check dependencies
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Add a small delay to ensure all components are loaded
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Check if all required components are available
+        if (typeof FileUploader === 'undefined') {
+          throw new Error('FileUploader component not loaded');
+        }
+        
+        console.log('Excel Comparator app initialized successfully');
+        setIsAppReady(true);
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        setError('Failed to initialize application. Please refresh the page.');
+        setIsAppReady(true); // Still show the app, but with error
+      }
+    };
+
+    initializeApp();
+  }, []);
+
   const pageVariants = {
     initial: { opacity: 0, x: -100 },
     in: { opacity: 1, x: 0 },
@@ -48,6 +108,11 @@ function App() {
     ease: 'anticipate',
     duration: 0.5
   };
+
+  // Show loading fallback while app is initializing
+  if (!isAppReady) {
+    return <LoadingFallback />;
+  }
 
   return (
     <div className="App">

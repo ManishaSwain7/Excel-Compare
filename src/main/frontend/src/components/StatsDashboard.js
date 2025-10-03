@@ -3,8 +3,27 @@ import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const StatsDashboard = ({ comparisonResult }) => {
-  if (!comparisonResult || !comparisonResult.statistics) {
+  // Defensive checks for required props and data
+  if (!comparisonResult) {
+    console.warn('StatsDashboard: comparisonResult prop is required');
     return null;
+  }
+
+  if (!comparisonResult.statistics) {
+    console.warn('StatsDashboard: comparisonResult.statistics is missing');
+    return (
+      <motion.div 
+        className="stats-container"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="card">
+          <div className="alert alert-info" style={{ textAlign: 'center' }}>
+            <strong>Info:</strong> No statistics available for this comparison.
+          </div>
+        </div>
+      </motion.div>
+    );
   }
 
   const { statistics } = comparisonResult;
