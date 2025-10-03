@@ -9,10 +9,17 @@ const ComparisonResults = ({ comparisonResult, comparisonId }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   if (!comparisonResult) {
+    console.warn('ComparisonResults: comparisonResult prop is required');
     return null;
   }
 
-  const { metadataMismatches, missingInA, missingInB, matchedDocuments } = comparisonResult;
+  // Defensive extraction with defaults
+  const {
+    metadataMismatches = [],
+    missingInA = [],
+    missingInB = [],
+    matchedDocuments = []
+  } = comparisonResult;
 
   const handleFilter = async () => {
     if (selectedField) {

@@ -52,6 +52,17 @@ const FileUploader = ({ onFilesSelected, isLoading }) => {
     setFiles({ ...files, [fileType]: null });
   };
 
+  // Defensive check for required props (after hooks)
+  if (typeof onFilesSelected !== 'function') {
+    console.error('FileUploader: onFilesSelected prop is required and must be a function');
+    return (
+      <div className="alert alert-error" style={{ textAlign: 'center' }}>
+        <strong>Configuration Error:</strong> FileUploader component is not properly configured.
+        Please refresh the page.
+      </div>
+    );
+  }
+
   const renderDropzone = (dropzone, fileType, title, description) => {
     const file = files[fileType];
     const isDragActive = dropzone.isDragActive || draggedOver === fileType;
